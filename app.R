@@ -7,9 +7,15 @@ library(plotly)
 library(shinythemes)
 library(stringr)
 
-#upload Philly shooting victim data from Opendataphilly
+# Upload Philly shooting victim data from Opendataphilly
 shootings <- read.csv ("shootings.8.csv")
 
+# A couple of fields in the shootings data were modified to help build the app. 
+# Code_2 is a cleaner field than code
+# Wound  field was cleaned and turned into broader categories
+# Race field did not include Latino status, which was a separate field. It was then cleaned to be inclusive
+# Sex was cleaned from M and F to Male and Female
+# NA's were included where there was blank data
 
 shootings.load <- shootings %>%
   mutate(dc_key = as.character(dc_key),
@@ -17,7 +23,6 @@ shootings.load <- shootings %>%
          location = as.factor(location))
 
 pdf(NULL)
-
 
 # Define UI for application that draws a histogram
 ui <- navbarPage("Exploring Shooting Victim Data from Philadelphia", 
@@ -40,14 +45,14 @@ ui <- navbarPage("Exploring Shooting Victim Data from Philadelphia",
                                           value = c(min(shootings.load$year, na.rm = T), max(shootings.load$year, na.rm = T)),
                                           step = 1),
                               
-                              # check box Input for whether incident occured inside
+                              # Check box Input for whether incident occured inside
                               checkboxGroupInput(inputId = "IncidentInside",
                                                  label = "Was the Incident Inside?:",
                                                  choiceNames = list("Yes", "No"),
                                                  choiceValues = list("1", "0")
                               ),
                               
-                              # action button
+                              # Action button
                               actionButton("reset", "Reset Filters", icon = icon("refresh"))
                             ),
                             
@@ -87,13 +92,13 @@ server <- function(input, output, session = session) {
     
     return(shootings)
   })
-  # Reactive melted data?
+  # Reactive melted data
   meltInput <- reactive({
     shootInput() %>%
       melt(id = "Code_2")
   })
   
-  # column plot showing types of wounds
+  # Column plot showing types of wounds
   output$woundplotc <- renderPlotly({
     dat <- shootInput()
     ggplotly(
@@ -106,7 +111,7 @@ server <- function(input, output, session = session) {
         guides(color = FALSE)) 
     
   })
-  # sex bar plot
+  # Sex bar plot
   output$sexplot <- renderPlotly({
     dat <- shootInput()
     ggplotly(
@@ -116,7 +121,7 @@ server <- function(input, output, session = session) {
         theme(legend.title = element_blank()) +
         guides(color = FALSE))
   })
-  # race bar plot
+  # Race bar plot
   output$raceplot <- renderPlotly({
     dat <- shootInput()
     ggplotly(
