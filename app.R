@@ -8,6 +8,128 @@ library(shinythemes)
 library(stringr)
  
 # new url   url <- "https://phl.carto.com/api/v2/sql?q=SELECT+*+FROM+shootings" 
+ckanSQL <- function(url) {
+  url <- "https://phl.carto.com/api/v2/sql?q=SELECT+*+FROM+shootings" 
+  # Make the Request
+  r <- RETRY("GET", URLencode(url))
+  
+  # Extract Content
+  c <- content(r, "text")
+  
+  # Create Dataframe
+  dat <- data.frame(jsonlite::fromJSON(c)$rows)
+}
+
+dat$code<- as.numeric(as.character(dat$code))
+dat$latino <- as.character(dat$latino)
+
+newdat <- dat %>%
+  mutate(
+    wound = case_when(
+      wound == "aabdomen" ~ "Abdomen",
+      wound == "abdom" ~ "Abdomen",
+      wound == "abdome" ~ "Abdomen",
+      wound == "abdomen" ~ "Abdomen",
+      wound == "ankle" ~ "Ankle",
+      wound == "arm" ~ "Arm",
+      wound == "arms" ~ "Arm",
+      wound == "elbow" ~ "Arm",
+      wound == "forearm" ~ "Arm",
+      wound == "back" ~ "Back",
+      wound == "back/head" ~ "Back",
+      wound == "flank" ~ "Back",
+      wound == "body" ~ "Body",
+      wound == "ribs" ~ "Body",
+      wound == "side" ~ "Body",
+      wound == "torso" ~ "Body",
+      wound == "butt" ~ "Butt",
+      wound == "buttock" ~ "Butt",
+      wound == "buttocks" ~ "Butt",
+      wound == "cheat" ~ "Chest",
+      wound == "chest" ~ "Chest",
+      wound == "chest/back" ~ "Chest",
+      wound == "foot" ~ "Foot",
+      wound == "groin" ~ "Groin",
+      wound == "testicle" ~ "Groin",
+      wound == "cheek" ~ "Head",
+      wound == "ear" ~ "Head",
+      wound == "eye" ~ "Head",
+      wound == "face" ~ "Head",
+      wound == "face/multi" ~ "Head",
+      wound == "head" ~ "Head",
+      wound == "head-m" ~ "Head",
+      wound == "head-md" ~ "Head",
+      wound == "head/back" ~ "Head",
+      wound == "head/chest" ~ "Head",
+      wound == "head/mullt" ~ "Head",
+      wound == "head/multi" ~ "Head",
+      wound == "temple" ~ "Head",
+      wound == "wrist" ~ "Hand",
+      wound == "finger" ~ "Hand",
+      wound == "hand" ~ "Hand",
+      wound == "thumb" ~ "Hand",
+      wound == "hip" ~ "Hip",
+      wound == "pelvis" ~ "Hip",
+      wound == "waist" ~ "Hip",
+      wound == "calf" ~ "Leg",
+      wound == "knee" ~ "Leg",
+      wound == "leg" ~ "Leg",
+      wound == "leg/buttoc" ~ "Leg",
+      wound == "leg/multi" ~ "Leg",
+      wound == "legs" ~ "Leg",
+      wound == "shin" ~ "Leg",
+      wound == "thigh" ~ "Leg",
+      wound == "thighs" ~ "Leg",
+      wound == "mukti" ~ "Multi",
+      wound == "mullti" ~ "Multi",
+      wound == "mult" ~ "Multi",
+      wound == "mult/headi" ~ "Multi",
+      wound == "multi" ~ "Multi",
+      wound == "multi leg" ~ "Multi",
+      wound == "multi tors" ~ "Multi",
+      wound == "multi/arm" ~ "Multi",
+      wound == "multi/face" ~ "Multi",
+      wound == "multi/head" ~ "Multi",
+      wound == "multli" ~ "Multi",
+      wound == "mutli" ~ "Multi",
+      wound == "mutli/head" ~ "Multi",
+      wound == "neck" ~ "Neck",
+      wound == "throat" ~ "Neck",
+      wound == "shou" ~ "Shoulder",
+      wound == "shoul" ~ "Shoulder",
+      wound == "should" ~ "Shoulder",
+      wound == "shouldeer" ~ "Shoulder",
+      wound == "shoulder" ~ "Shoulder",
+      wound == "shouldr" ~ "Shoulder",
+      wound == "stom" ~ "Stomach",
+      wound == "stomach" ~ "Stomach",
+      TRUE ~ as.character(wound)
+    ),
+    
+    race = ifelse(latino == "1", race == "Hispanic", race),
+    
+    race = case_when(
+      race == "A" ~ "Asian",
+      race == "B" ~ "Black",
+      race == "b" ~ "Black",
+      race == "W" ~ "White",
+      race == "M" ~ "Multi",
+      race == FALSE ~ "Hispanic",
+      TRUE ~ as.character(race)
+    ), 
+    sex = ifelse(sex == "M", "Male", "Female"),
+    
+    code = case_when(
+      code > 2999 ~ "Hospital Cases",
+      code > 399 ~ "Aggravated Assault",
+      code > 299 ~ "Robbery",
+      code > 199 ~ "Rape",
+      code > 99 ~ "Homicide",
+      code < 100 ~ "Additional Victim",
+      TRUE ~ as.character(code)
+    )
+  )
+
 # Upload Philly shooting victim data from Opendataphilly
 shootings <- read.csv ("shootings.8.csv")
 
