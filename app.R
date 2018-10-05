@@ -6,7 +6,8 @@ library(dplyr)
 library(plotly)
 library(shinythemes)
 library(stringr)
-
+ 
+# new url   url <- "https://phl.carto.com/api/v2/sql?q=SELECT+*+FROM+shootings" 
 # Upload Philly shooting victim data from Opendataphilly
 shootings <- read.csv ("shootings.8.csv")
 
