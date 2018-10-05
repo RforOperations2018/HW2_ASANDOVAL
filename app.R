@@ -272,16 +272,12 @@ server <- function(input, output, session = session) {
       theme(legend.title = element_blank()))
   })
   
-  
-  
-  
-  
   # Race bar plot
   output$raceplot <- renderPlotly({
     dat <- shootInput()
     ggplotly(
-      ggplot(data = dat, aes(x = race, fill = race)) + 
-        geom_bar (position = position_dodge(width = 0.9), na.rm = TRUE) +
+      ggplot(data = dat, na.rm = TRUE, aes(x = race, fill = race)) + 
+        geom_bar (position = position_dodge(width = 0.9)) +
         xlab("Race") +
         theme(legend.title = element_blank()) +
         guides(color = FALSE))
