@@ -11,7 +11,7 @@ library(plotly)
 library(htmltools)
  
 
-ckanSQL <- function(url) {
+
   url <- "https://phl.carto.com/api/v2/sql?q=SELECT+*+FROM+shootings" 
   # Make the Request
   r <- RETRY("GET", URLencode(url))
@@ -21,13 +21,22 @@ ckanSQL <- function(url) {
   
   # Create Dataframe
   dat <- data.frame(jsonlite::fromJSON(c)$rows)
-}
 
+
+# Change data types
 dat$code<- as.numeric(as.character(dat$code))
 dat$latino <- as.character(dat$latino)
 
+# Mutate data
 newdat <- dat %>%
   mutate(
+    # Clean Data
+    # Clean Wounds fields. This one took forever! I tried to do a case when IN function like in sql to save some 
+    # lines of code, but no luck so I did it this way. I first opened the csv and manually categorized each value 
+    # into a body area and then added all the quotes, equal signs, and squiggly signs in excel so I could just 
+    # copy and paste it into r. I know this probably isn’t the best to clean data that is going to continually 
+    # update since potentially a new cell could be spelled  aaaabbbdddoommenn  or some other incorrect way for 
+    # abdomen but, this is what I could do.
     wound = case_when(
       wound == "aabdomen" ~ "Abdomen",
       wound == "abdom" ~ "Abdomen",
@@ -51,9 +60,11 @@ newdat <- dat %>%
       wound == "cheat" ~ "Chest",
       wound == "chest" ~ "Chest",
       wound == "chest/back" ~ "Chest",
+      wound == "feet" ~ "Foot",
       wound == "foot" ~ "Foot",
       wound == "groin" ~ "Groin",
       wound == "testicle" ~ "Groin",
+      wound == "HEAD" ~ "Head",
       wound == "cheek" ~ "Head",
       wound == "ear" ~ "Head",
       wound == "eye" ~ "Head",
@@ -80,6 +91,7 @@ newdat <- dat %>%
       wound == "leg/buttoc" ~ "Leg",
       wound == "leg/multi" ~ "Leg",
       wound == "legs" ~ "Leg",
+      wound == "LEG" ~ "Leg",
       wound == "shin" ~ "Leg",
       wound == "thigh" ~ "Leg",
       wound == "thighs" ~ "Leg",
@@ -106,22 +118,31 @@ newdat <- dat %>%
       wound == "shouldr" ~ "Shoulder",
       wound == "stom" ~ "Stomach",
       wound == "stomach" ~ "Stomach",
+      wound == "unk" ~ "Unknown",
       TRUE ~ as.character(wound)
     ),
     
+    # I tried to do a case when on the latino field to be in the race field by doing if latino == “1” ~ race == “Hispanic” but 
+    # it didn’t work and couldn’t figure out a better way. This was my weird workaround to get latino into race. This command 
+    # essentially turned race into false where latino == 1
     race = ifelse(latino == "1", race == "Hispanic", race),
     
+    # I then did a case when to get it to be Hispanic and cleaned the others
     race = case_when(
       race == "A" ~ "Asian",
       race == "B" ~ "Black",
       race == "b" ~ "Black",
+      race == "w" ~ "White",
       race == "W" ~ "White",
       race == "M" ~ "Multi",
       race == FALSE ~ "Hispanic",
       TRUE ~ as.character(race)
     ), 
+    
+    # Clean sex
     sex = ifelse(sex == "M", "Male", "Female"),
     
+    # This was another tricky one. I originally tried to do a case when if code >= 100 <= 119 ~ “Homicide” but it didn’t work. This works but not ideal.
     code = case_when(
       code > 2999 ~ "Hospital Cases",
       code > 399 ~ "Aggravated Assault",
@@ -133,8 +154,9 @@ newdat <- dat %>%
     )
   )
 
+
 # Upload Philly shooting victim data from Opendataphilly
-shootings <- read.csv ("shootings.8.csv")
+shootings.load <- newdat
 
 # A couple of fields in the shootings data were modified to help build the app. 
 # Code_2 is a cleaner field than code
@@ -143,10 +165,10 @@ shootings <- read.csv ("shootings.8.csv")
 # Sex was cleaned from M and F to Male and Female
 # NA's were included where there was blank data
 
-shootings.load <- shootings %>%
-  mutate(dc_key = as.character(dc_key),
-         the_geom_webmercator = as.character(the_geom_webmercator),
-         location = as.factor(location))
+# shootings.load <- shootings %>%
+#   mutate(dc_key = as.character(dc_key),
+#          the_geom_webmercator = as.character(the_geom_webmercator),
+#          location = as.factor(location))
 
 pdf(NULL)
 
@@ -158,7 +180,7 @@ ui <- navbarPage("Exploring Shooting Victim Data from Philadelphia",
                               # Selecting type of crime
                               selectInput("crimeSelect",
                                           "Type of Incident:",
-                                          choices = sort(unique(shootings.load$Code_2)),
+                                          choices = sort(unique(shootings.load$code)),
                                           multiple = TRUE,
                                           selectize = TRUE,
                                           selected = c("Aggravated Assualt", "Robbery", "Homicide", "Hospital Cases")),
@@ -208,7 +230,7 @@ server <- function(input, output, session = session) {
     
     # Type of Crime Filter
     if (length(input$crimeSelect) > 0 ) {
-      shootings <- subset(shootings, Code_2 %in% input$crimeSelect)
+      shootings <- subset(shootings, code %in% input$crimeSelect)
     } 
     
     # Location of Incident
@@ -221,14 +243,14 @@ server <- function(input, output, session = session) {
   # Reactive melted data
   meltInput <- reactive({
     shootInput() %>%
-      melt(id = "Code_2")
+      melt(id = "code")
   })
   
   # Column plot showing types of wounds
   output$woundplotc <- renderPlotly({
     dat <- shootInput()
     ggplotly(
-      ggplot(data = dat, aes(x = wound_2, fill = wound_2 )) + 
+      ggplot(data = dat, aes(x = wound, fill = wound )) + 
         geom_bar(position = position_dodge(width = 0.9)) +
         xlab("Area of Injury") +
         theme(axis.text.x = element_text (angle = 45,
@@ -252,7 +274,7 @@ server <- function(input, output, session = session) {
   output$raceplot <- renderPlotly({
     dat <- shootInput()
     ggplotly(
-      ggplot(data = dat, aes(x = race, fill = race)) + 
+      ggplot(data = dat, aes(x = race, fill = race, na.rm = T)) + 
         geom_bar (position = position_dodge(width = 0.9)) +
         xlab("Race") +
         theme(legend.title = element_blank()) +
@@ -262,7 +284,7 @@ server <- function(input, output, session = session) {
   # Data Table
   output$table <- DT::renderDataTable({
     shootings <- shootInput()
-    subset(shootings, select = c(Code_2, offender_injured, location, race, sex, dist, time))
+    subset(shootings, select = c(code, offender_injured, location, race, sex, dist, time))
   })
   
   # Updating the URL Bar
