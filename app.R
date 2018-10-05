@@ -235,6 +235,7 @@ server <- function(input, output, session = session) {
     
   })
   # Sex bar plot
+  # In the future I'd like to see more than just bar charts
   output$sexplot <- renderPlotly({
     dat <- shootInput()
     ggplotly(
