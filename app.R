@@ -207,7 +207,7 @@ ui <- navbarPage("Exploring Shooting Victim Data from Philadelphia",
                             # Output plot
                             mainPanel(
                               plotlyOutput("woundplotc"), 
-                              plotlyOutput("sexplot"),
+                              plotlyOutput("codeplot"),
                               plotlyOutput("raceplot"))
                           )),
                  
@@ -251,31 +251,37 @@ server <- function(input, output, session = session) {
     dat <- shootInput()
     ggplotly(
       ggplot(data = dat, aes(x = wound, fill = wound )) + 
-        geom_bar(position = position_dodge(width = 0.9)) +
+        geom_bar(position = position_dodge(width = 0.9), na.rm = TRUE) +
         xlab("Area of Injury") +
         theme(axis.text.x = element_text (angle = 45,
                                           hjust = 1),
               legend.title = element_blank()) +
         guides(color = FALSE)) 
     
-  })
-  # Sex bar plot
-  # In the future I'd like to see more than just bar charts
-  output$sexplot <- renderPlotly({
+ })
+  
+  # A plot showing the the fequency of incidents over the years
+  output$codeplot <- renderPlotly({
     dat <- shootInput()
     ggplotly(
-      ggplot(data = dat, aes(x = sex, fill = sex)) + 
-        geom_bar (position = position_dodge(width = 0.9)) +
-        xlab("Sex") +
-        theme(legend.title = element_blank()) +
-        guides(color = FALSE))
+      ggplot(data = dat, aes(x = year, color = code)) + 
+      geom_freqpoly() +
+      guides(fill = FALSE) +
+      scale_x_continuous(name = "Incident Year") +
+      scale_y_continuous(name = "Types of Incidents Per Year") +
+      theme(legend.title = element_blank()))
   })
+  
+  
+  
+  
+  
   # Race bar plot
   output$raceplot <- renderPlotly({
     dat <- shootInput()
     ggplotly(
-      ggplot(data = dat, aes(x = race, fill = race, na.rm = T)) + 
-        geom_bar (position = position_dodge(width = 0.9)) +
+      ggplot(data = dat, aes(x = race, fill = race)) + 
+        geom_bar (position = position_dodge(width = 0.9), na.rm = TRUE) +
         xlab("Race") +
         theme(legend.title = element_blank()) +
         guides(color = FALSE))
