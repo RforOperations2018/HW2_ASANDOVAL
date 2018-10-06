@@ -83,7 +83,7 @@ ui <- navbarPage("Exploring Shooting Victim Data from Philadelphia",
 
 server <- function(input, output, session = session) {
     shootInput <- reactive({
-  url <- "https://phl.carto.com/api/v2/sql?q=SELECT+*+FROM+shootings+WHERE+year+>=+'", input$yearSelect[1], "'+AND+<=+'", input$yearSelect[2], "'+AND+code+=+'", input$crimeSelect, "'"
+  url <- paste0("https://phl.carto.com/api/v2/sql?q=SELECT+*+FROM+shootings+WHERE+year+>=+'", input$yearSelect[1],"'+AND+<=+'",input$yearSelect[2],"'+AND+code+=+'",input$crimeSelect,"'")
   r <- RETRY("GET", URLencode(url))
   c <- content(r, "text")
   dat <- data.frame(jsonlite::fromJSON(c)$rows)
