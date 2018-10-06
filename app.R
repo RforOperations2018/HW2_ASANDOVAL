@@ -90,7 +90,9 @@ ui <- navbarPage("Exploring Shooting Victim Data from Philadelphia",
 server <- function(input, output, session = session) {
     loadshoot <- reactive({
       # Build API Query with proper encodes    
-  url <- paste0("https://phl.carto.com/api/v2/sql?q=SELECT+*+FROM+shootings+WHERE+year+%3E%3D+",input$yearSelect[1],"+AND+year+%3C%3D+",input$yearSelect[2],"+AND+code+%3D+'",input$crimeSelect,"'")
+  url <- paste0("https://phl.carto.com/api/v2/sql?q=SELECT+*+FROM+shootings+WHERE+year+%3E%3D+'",input$yearSelect[1],"'+AND+year+%3C%3D+'",input$yearSelect[2],"'") #+AND+code+%3D+'",input$crimeSelect,"'")
+  # For crimSelect you needed to use an IN statement: https://www.w3schools.com/sql/sql_in.asp
+  print(url)
   dat <- ckanSQL(url) %>%  
     # https://phl.carto.com/api/v2/sql?q=SELECT+p.*%2C++case+when+code2+%3C100+then+'Additional+Victim'+when+code2+%3C120+then+'Homicide'+when+code2+%3C300+then+'Rape'+when+code2+%3C400+then+'Robbery'+when+code2+%3C500+then+'Aggravated+Assault'+when+code2+%3C3901+then+'Hospital+Cases'+else+null+end+as+incidents+FROM+(SELECT+*%2C+CAST(code+AS+int)+as+code2+FROM+shootings)+as+p 
     
@@ -106,6 +108,7 @@ server <- function(input, output, session = session) {
       # copy and paste it into r. I know this probably isn’t the best to clean data that is going to continually 
       # update since potentially a new cell could be spelled  aaaabbbdddoommenn  or some other incorrect way for 
       # abdomen but, this is what I could do.
+  # You could have used tolower() and/or tools::toTitlCase() Also, if you have a list of things you want to match off of you can use %in% instead ie: wound %in% c("aabdomen", "abdom", "abdome", "abdomen") lastly you can use grepl()
    mutate(wound = case_when(
         wound == "aabdomen" ~ "Abdomen",
         wound == "abdom" ~ "Abdomen",
