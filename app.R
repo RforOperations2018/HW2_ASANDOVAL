@@ -27,7 +27,7 @@ ckanUniques <- function(field, id) {
 
 incident <- sort(ckanUniques("code", "shootings")$code)
 years <- sort(ckanUniques("year", "shootings")$year)
-
+inside <- sort(ckanUniques("inside", "shootings")$inside)
 
 pdf(NULL)
 
@@ -79,20 +79,21 @@ ui <- navbarPage("Exploring Shooting Victim Data from Philadelphia",
                  )
 )
 
-# Define server logic
 
+########
+# Define server logic
 server <- function(input, output, session = session) {
-    shootInput <- reactive({
+    loadshoot <- reactive({
+      # Build API Query with proper encodes    
   url <- paste0("https://phl.carto.com/api/v2/sql?q=SELECT+*+FROM+shootings+WHERE+year+>=+'", input$yearSelect[1],"'+AND+<=+'",input$yearSelect[2],"'+AND+code+=+'",input$crimeSelect,"'")
-  r <- RETRY("GET", URLencode(url))
-  c <- content(r, "text")
-  dat <- data.frame(jsonlite::fromJSON(c)$rows)
+
+  dat <- ckanSQL(url) %>%
   # Change data types
-  dat$code<- as.numeric(as.character(dat$code))
-  dat$latino <- as.character(dat$latino)
+  # dat$code <- as.numeric(as.character(dat$code)) %>%
+  # dat$latino <- as.character(dat$latino) %>%
   
   # Mutate data
-  newdat <- dat %>%
+
     mutate(
       # Clean Data
       # Clean Wounds fields. This one took forever! I tried to do a case when IN function like in sql to save some 
@@ -217,7 +218,7 @@ server <- function(input, output, session = session) {
         TRUE ~ as.character(code)
       )
     )
-  return(shootings.load)
+  return(dat)
 })
 
 
@@ -245,7 +246,7 @@ server <- function(input, output, session = session) {
   
   
   # Filtered shootings data
- # shootInput <- reactive({
+ # loadshoot <- reactive({
   #   shootings <- shootings.load %>%
   #     # Slider Filter
   #     filter(year >= input$yearSelect[1] & year <= input$yearSelect[2])
@@ -264,12 +265,12 @@ server <- function(input, output, session = session) {
   # })
   # Reactive melted data
   meltInput <- reactive({
-    shootInput() %>%
+    loadshoot() %>%
       melt(id = "code")
   })
   # A plot showing the the fequency of incidents over the years
   output$codeplot <- renderPlotly({
-    dat <- shootInput()
+    dat <- loadshoot()
     ggplotly(
       ggplot(data = dat, aes(x = year, color = code)) + 
         geom_freqpoly() +
@@ -282,7 +283,7 @@ server <- function(input, output, session = session) {
   
   # Column plot showing types of wounds
   output$woundplotc <- renderPlotly({
-    dat <- shootInput()
+    dat <- loadshoot()
     ggplotly(
       ggplot(data = dat, aes(x = wound, fill = as.character(fatal))) + 
         geom_bar (position = position_dodge(width = 0.7)) +
@@ -301,7 +302,7 @@ server <- function(input, output, session = session) {
   
   # Race bar plot
   output$raceplot <- renderPlotly({
-    dat <- shootInput()
+    dat <- loadshoot()
     ggplotly(
       ggplot(data = dat, aes(x = race, fill = sex)) +
         geom_bar (position = position_dodge(width = 0.9)) +
@@ -315,7 +316,7 @@ server <- function(input, output, session = session) {
   # 
   # # A plot showing the sale price of properties
   # output$raceplot <- renderPlotly({
-  #   dat <- shootInput()
+  #   dat <- loadshoot()
   #   ggplotly()
   #   ggplot(data = dat, 
   #          aes(x = as.numeric(year), 
@@ -331,8 +332,8 @@ server <- function(input, output, session = session) {
   
   # Data Table
   output$table <- DT::renderDataTable({
-    shootings <- shootInput()
-    subset(shootings, select = c(code, offender_injured, location, race, sex, dist, time))
+    dat <- loadshoot()
+    subset(dat, select = c(code, offender_injured, location, race, sex, dist, time))
   })
   
   # Updating the URL Bar
@@ -352,7 +353,7 @@ server <- function(input, output, session = session) {
     },
     
     content = function(file) {
-      write.csv(shootInput(), file)
+      write.csv(loadshoot(), file)
     }
   )
   
