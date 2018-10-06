@@ -30,8 +30,12 @@ ckanUniques <- function(field, id) {
 # incident <- sort(ckanUniques("code", "shootings")$code)
 years <- sort(ckanUniques("year", "shootings")$year)
 inside <- sort(ckanUniques("inside", "shootings")$inside)
-
-incident <- sort(ckanUniques("code", "shootings")$code) 
+url2 <- paste0("https://phl.carto.com/api/v2/sql?q=SELECT+p.*%2C++case+when+code2+%3C100+then+'Additional+Victim'+when+code2+%3C120+then+'Homicide'+when+code2+%3C300+then+'Rape'+when+code2+%3C400+then+'Robbery'+when+code2+%3C500+then+'Aggravated+Assault'+when+code2+%3C3901+then+'Hospital+Cases'+else+null+end+as+incidents+FROM+(SELECT+*%2C+CAST(code+AS+int)+as+code2+FROM+shootings)+as+p")
+r2 <- RETRY("GET", URLencode(url2))
+# EXTRACT CONTENT
+c2 <- content(r2, "text")
+# Create Dataframe
+incident <- data.frame(jsonlite::fromJSON(c2)$rows)
 # %>%
 #   mutate(code = as.numeric(code),
 #          code = case_when(
@@ -53,7 +57,7 @@ ui <- navbarPage("Exploring Shooting Victim Data from Philadelphia",
                               # Selecting type of crime
                               selectInput("crimeSelect",
                                           "Type of Incident:",
-                                          choices = incident,
+                                          choices = incident$incidents,
                                           multiple = TRUE,
                                           selectize = TRUE,
                                           selected = c("Aggravated Assualt", "Robbery", "Homicide", "Hospital Cases")),
@@ -97,16 +101,10 @@ ui <- navbarPage("Exploring Shooting Victim Data from Philadelphia",
 server <- function(input, output, session = session) {
     loadshoot <- reactive({
       # Build API Query with proper encodes    
-  url <- paste0("https://phl.carto.com/api/v2/sql?q=SELECT+*+FROM+shootings+WHERE+year+%3E%3D+", input$yearSelect[1],"+AND+year+%3C%3D+",input$yearSelect[2],"+AND+code+%3D+'",input$crimeSelect,"'")
+  url <- paste0("https://phl.carto.com/api/v2/sql?q=SELECT+*FROM+shootings+WHERE+year+%3E%3D+", input$yearSelect[1],"+AND+year+%3C%3D+",input$yearSelect[2],"+AND+code+%3D+'",input$crimeSelect,"'")
   dat <- ckanSQL(url) %>%  
-    # # "'+AND+code+=+'",input$crimeSelect,"'"
-    # filter(year >= input$yearSelect[1] & year <= input$yearSelect[2])   
-    # 
-    # # Type of Crime Filter
-    # if (length(input$crimeSelect) > 0 ) {
-    #   dat <- subset(dat, code %in% input$crimeSelect)
-    # }
-    # 
+    # https://phl.carto.com/api/v2/sql?q=SELECT+p.*%2C++case+when+code2+%3C100+then+'Additional+Victim'+when+code2+%3C120+then+'Homicide'+when+code2+%3C300+then+'Rape'+when+code2+%3C400+then+'Robbery'+when+code2+%3C500+then+'Aggravated+Assault'+when+code2+%3C3901+then+'Hospital+Cases'+else+null+end+as+incidents+FROM+(SELECT+*%2C+CAST(code+AS+int)+as+code2+FROM+shootings)+as+p 
+    
     # # Location of Incident
     # if (length(input$IncidentInside) > 0 ) {
     #   dat <- subset(dat, inside %in% input$IncidentInside)
