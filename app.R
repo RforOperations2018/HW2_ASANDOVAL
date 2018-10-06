@@ -9,16 +9,13 @@ library(httr)
 library(jsonlite)
 library(plotly)
 library(htmltools)
- 
 
 ckanSQL <- function(url) {
   # MAKE REQUEST
   r <- RETRY("GET", URLencode(url))
   # EXTRACT CONTENT
   c <- content(r, "text")
-  # Basic gsub to make NA's consistent with R
-  json <- gsub('NaN', 'NA', c, perl = TRUE)
-  # Create Dataframe
+  # CREATE DATAFRAME
   data.frame(jsonlite::fromJSON(c)$rows)
 }
 # UNIQUE VALUES FOR RESOURCE FIELD
@@ -27,25 +24,19 @@ ckanUniques <- function(field, id) {
   c(ckanSQL(URLencode(url)))
 }
 
-# incident <- sort(ckanUniques("code", "shootings")$code)
+
 years <- sort(ckanUniques("year", "shootings")$year)
 inside <- sort(ckanUniques("inside", "shootings")$inside)
+# This will let my code to remain as numbers but then I can only see one of the codes.
+incident.backup <- sort(ckanUniques("code", "shootings")$code)
+
+# Weird workaround to get from numbers to words for my crime input but then I can't see my plot 
 url2 <- paste0("https://phl.carto.com/api/v2/sql?q=SELECT+p.*%2C++case+when+code2+%3C100+then+'Additional+Victim'+when+code2+%3C120+then+'Homicide'+when+code2+%3C300+then+'Rape'+when+code2+%3C400+then+'Robbery'+when+code2+%3C500+then+'Aggravated+Assault'+when+code2+%3C3901+then+'Hospital+Cases'+else+null+end+as+incidents+FROM+(SELECT+*%2C+CAST(code+AS+int)+as+code2+FROM+shootings)+as+p")
 r2 <- RETRY("GET", URLencode(url2))
 # EXTRACT CONTENT
 c2 <- content(r2, "text")
-# Create Dataframe
+# CREATE DATAFRAME
 incident <- data.frame(jsonlite::fromJSON(c2)$rows)
-# %>%
-#   mutate(code = as.numeric(code),
-#          code = case_when(
-#            code > 2999 ~ "Hospital Cases",
-#            code > 399 ~ "Aggravated Assault",
-#            code > 299 ~ "Robbery",
-#            code > 199 ~ "Rape",
-#            code > 99 ~ "Homicide",
-#            code < 100 ~ "Additional Victim",
-#            TRUE ~ as.character(code)))
 
 pdf(NULL)
 
@@ -60,7 +51,7 @@ ui <- navbarPage("Exploring Shooting Victim Data from Philadelphia",
                                           choices = incident$incidents,
                                           multiple = TRUE,
                                           selectize = TRUE,
-                                          selected = c("Aggravated Assualt", "Robbery", "Homicide", "Hospital Cases")),
+                                          selected = c("Aggravated Assault")),
                               
                               # Year of Incident Slider
                               sliderInput("yearSelect",
@@ -74,12 +65,10 @@ ui <- navbarPage("Exploring Shooting Victim Data from Philadelphia",
                               checkboxGroupInput(inputId = "IncidentInside",
                                                  label = "Was the Incident Inside?:",
                                                  choiceNames = list("Yes", "No"),
-                                                 choiceValues = list("1", "0")
-                              ),
+                                                 choiceValues = list("1", "0")),
                               
                               # Action button
-                              actionButton("reset", "Reset Filters", icon = icon("refresh"))
-                            ),
+                              actionButton("reset", "Reset Filters", icon = icon("refresh"))),
                             
                             # Output plot
                             mainPanel(
@@ -101,26 +90,23 @@ ui <- navbarPage("Exploring Shooting Victim Data from Philadelphia",
 server <- function(input, output, session = session) {
     loadshoot <- reactive({
       # Build API Query with proper encodes    
-  url <- paste0("https://phl.carto.com/api/v2/sql?q=SELECT+*FROM+shootings+WHERE+year+%3E%3D+", input$yearSelect[1],"+AND+year+%3C%3D+",input$yearSelect[2],"+AND+code+%3D+'",input$crimeSelect,"'")
+  url <- paste0("https://phl.carto.com/api/v2/sql?q=SELECT+*+FROM+shootings+WHERE+year+%3E%3D+",input$yearSelect[1],"+AND+year+%3C%3D+",input$yearSelect[2],"+AND+code+%3D+'",input$crimeSelect,"'")
   dat <- ckanSQL(url) %>%  
     # https://phl.carto.com/api/v2/sql?q=SELECT+p.*%2C++case+when+code2+%3C100+then+'Additional+Victim'+when+code2+%3C120+then+'Homicide'+when+code2+%3C300+then+'Rape'+when+code2+%3C400+then+'Robbery'+when+code2+%3C500+then+'Aggravated+Assault'+when+code2+%3C3901+then+'Hospital+Cases'+else+null+end+as+incidents+FROM+(SELECT+*%2C+CAST(code+AS+int)+as+code2+FROM+shootings)+as+p 
     
     # # Location of Incident
     # if (length(input$IncidentInside) > 0 ) {
     #   dat <- subset(dat, inside %in% input$IncidentInside)
-    # } %>%
-  
-# I tried doing this parsing thing, but I couldn't get it to work. When I removedit, it worked fine, so I took it out. 
-    #+WHERE+year+>+'", input$yearSelect[1],"'+AND+<=+'",input$yearSelect[2],"'+AND+code+=+'",input$crimeSelect,"'"
-    
-      # Clean Data
+    # }
+
+          # Clean Data
       # Clean Wounds fields. This one took forever! I tried to do a case when IN function like in sql to save some
       # lines of code, but no luck so I did it this way. I first opened the csv and manually categorized each value 
       # into a body area and then added all the quotes, equal signs, and squiggly signs in excel so I could just 
       # copy and paste it into r. I know this probably isn’t the best to clean data that is going to continually 
       # update since potentially a new cell could be spelled  aaaabbbdddoommenn  or some other incorrect way for 
       # abdomen but, this is what I could do.
-  mutate(wound = case_when(
+   mutate(wound = case_when(
         wound == "aabdomen" ~ "Abdomen",
         wound == "abdom" ~ "Abdomen",
         wound == "abdome" ~ "Abdomen",
@@ -249,8 +235,7 @@ server <- function(input, output, session = session) {
         scale_x_continuous(name = "Incident Year") +
         scale_y_continuous(name = "Counts") +
         ggtitle("Prevalent Incidents Per Year") +
-        theme(legend.title = element_blank()), height = 400, width = 650)
-  })
+        theme(legend.title = element_blank()), height = 400, width = 650)})
   
   # Column plot showing types of wounds
   output$woundplotc <- renderPlotly({
@@ -266,8 +251,7 @@ server <- function(input, output, session = session) {
                                           hjust = 1,
                                           size = 7),
               legend.title=element_text(size = 7)) +
-        guides(fill=guide_legend(title = "Was it Fatal?"), height = 400, width = 650))
- })
+        guides(fill=guide_legend(title = "Was it Fatal?"), height = 400, width = 650))})
   
   # Race bar plot
   output$raceplot <- renderPlotly({
@@ -279,8 +263,7 @@ server <- function(input, output, session = session) {
         ylab("Counts") +
         ggtitle("Types of Victims") +
         theme(legend.title = element_blank()) +
-        guides(color = FALSE), height = 400, width = 650)
-  })
+        guides(color = FALSE), height = 400, width = 650)})
   
   # Data Table
   output$table <- DT::renderDataTable({
@@ -304,6 +287,7 @@ server <- function(input, output, session = session) {
       write.csv(loadshoot(), file)})
   
   # Reset Filter Data
+  # I didn't even get to touch this part :(
   observeEvent(input$reset, {
     updateSelectInput(session, "crimeSelect", selected = c("Aggravated Assualt", "Robbery", "Homicide", "Hospital Cases"))
     updateCheckboxGroupInput(session, "IncidentInside", label = NULL, choices = NULL, selected = c("Y", "N"))
