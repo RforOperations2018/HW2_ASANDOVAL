@@ -64,9 +64,9 @@ ui <- navbarPage("Exploring Shooting Victim Data from Philadelphia",
                             
                             # Output plot
                             mainPanel(
-                              plotlyOutput("codeplot"),
-                              plotlyOutput("woundplotc"), 
-                              plotlyOutput("raceplot"))
+                              plotlyOutput("codeplot", width = "100%"),
+                              plotlyOutput("woundplotc", width = "100%"), 
+                              plotlyOutput("raceplot", width = "100%"))
                           )),
                  
                  # Data Table
@@ -259,8 +259,9 @@ server <- function(input, output, session = session) {
         geom_freqpoly() +
         guides(fill = FALSE) +
         scale_x_continuous(name = "Incident Year") +
-        scale_y_continuous(name = "Types of Incidents Per Year") +
-        theme(legend.title = element_blank()))
+        scale_y_continuous(name = "Counts") +
+        ggtitle("Prevalent Incidents Per Year") +
+        theme(legend.title = element_blank()), height = 400, width = 650)
   })
   
   # Column plot showing types of wounds
@@ -269,11 +270,15 @@ server <- function(input, output, session = session) {
     ggplotly(
       ggplot(data = dat, aes(x = wound, fill = as.character(fatal))) + 
         geom_bar (position = position_dodge(width = 0.7)) +
-        xlab("Area of Injury") +
+        xlab("       ") +
+        ylab("Counts") +
+        ggtitle("Where are Victims Injured the Most?") +
         theme(legend.position = "top",
-              axis.text.x = element_text (angle = 45,
-                                          hjust = 1)) +
-        guides(fill=guide_legend(title = "Fatal?")))
+              axis.text.x = element_text (angle = 30,
+                                          hjust = 1,
+                                          size = 7),
+              legend.title=element_text(size = 7)) +
+        guides(fill=guide_legend(title = "Was it Fatal?"), height = 400, width = 650))
  })
   
 
@@ -285,8 +290,10 @@ server <- function(input, output, session = session) {
       ggplot(data = dat, aes(x = race, fill = sex)) +
         geom_bar (position = position_dodge(width = 0.9)) +
         xlab("Race") +
+        ylab("Counts") +
+        ggtitle("Types of Victims") +
         theme(legend.title = element_blank()) +
-        guides(color = FALSE))
+        guides(color = FALSE), height = 400, width = 650)
   })
   
   # 
