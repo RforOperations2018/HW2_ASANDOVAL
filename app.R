@@ -103,9 +103,7 @@ server <- function(input, output, session = session) {
 
   dat <- ckanSQL(url) %>%
 
-  
-  
-  # Mutate data
+# I tried doing this parsing thing, but I couldn't get it to work. When I removedit, it worked fine, so I took it out. 
     #+WHERE+year+>=+'", input$yearSelect[1],"'+AND+<=+'",input$yearSelect[2],"'+AND+code+=+'",input$crimeSelect,"'"
     
       # Clean Data
@@ -200,11 +198,9 @@ server <- function(input, output, session = session) {
         wound == "unk" ~ "Unknown",
         TRUE ~ as.character(wound)),
         
-       
       # I tried to do a case when on the latino field to be in the race field by doing if latino == “1” ~ race == “Hispanic” but
       # it didn’t work and couldn’t figure out a better way. This was my weird workaround to get latino into race. This command
       # essentially turned race into false where latino == 1
-
       race = ifelse(latino == "1", race == "Hispanic", race),
     
       # I then did a case when to get it to be Hispanic and cleaned the others
@@ -221,6 +217,7 @@ server <- function(input, output, session = session) {
       # Clean sex
       sex = ifelse(sex == "M", "Male", "Female"),
       
+      # Change to numeric
       code = as.numeric(code),
       # This was another tricky one. I originally tried to do a case when if code >= 100 <= 119 ~ “Homicide” but it didn’t work. This works but not ideal.
       code = case_when(
@@ -235,9 +232,6 @@ server <- function(input, output, session = session) {
   return(dat)
 })
 
-  
-  # Filtered shootings data
- # loadshoot <- reactive({
   #   shootings <- shootings.load %>%
   #     # Slider Filter
   #     filter(year >= input$yearSelect[1] & year <= input$yearSelect[2])
@@ -251,9 +245,6 @@ server <- function(input, output, session = session) {
   #   if (length(input$IncidentInside) > 0 ) {
   #     shootings <- subset(shootings, inside %in% input$IncidentInside)
   #   }
-  #   
-  #   return(shootings)
-  # })
 
   # A plot showing the the fequency of incidents over the years
   output$codeplot <- renderPlotly({
@@ -274,7 +265,7 @@ server <- function(input, output, session = session) {
     ggplotly(
       ggplot(data = dat, aes(x = wound, fill = as.character(fatal))) + 
         geom_bar (position = position_dodge(width = 0.7)) +
-        xlab("       ") +
+        xlab(" ") +
         ylab("Counts") +
         ggtitle("Where are Victims Injured the Most?") +
         theme(legend.position = "top",
@@ -284,8 +275,6 @@ server <- function(input, output, session = session) {
               legend.title=element_text(size = 7)) +
         guides(fill=guide_legend(title = "Was it Fatal?"), height = 400, width = 650))
  })
-  
-
   
   # Race bar plot
   output$raceplot <- renderPlotly({
@@ -299,23 +288,6 @@ server <- function(input, output, session = session) {
         theme(legend.title = element_blank()) +
         guides(color = FALSE), height = 400, width = 650)
   })
-  
-  # 
-  # # A plot showing the sale price of properties
-  # output$raceplot <- renderPlotly({
-  #   newdat<- loadshoot()
-  #   ggplotly()
-  #   ggplot(data = dat, 
-  #          aes(x = as.numeric(year), 
-  #              y = as.numeric(dist), 
-  #              fill = code))  + 
-  #     geom_point(stroke = 0) +
-  #     guides(fill = FALSE) +
-  #     scale_y_continuous(name = "Districts", 
-  #                        labels = comma) +
-  #     scale_x_continuous(name = "Year") +
-  #     theme(legend.title = element_blank())
-  # })
   
   # Data Table
   output$table <- DT::renderDataTable({
@@ -341,14 +313,13 @@ server <- function(input, output, session = session) {
     
     content = function(file) {
       write.csv(loadshoot(), file)
-    }
-  )
+    })
   
   # Reset Filter Data
   observeEvent(input$reset, {
     updateSelectInput(session, "crimeSelect", selected = c("Aggravated Assualt", "Robbery", "Homicide", "Hospital Cases"))
     updateCheckboxGroupInput(session, "IncidentInside", label = NULL, choices = NULL, selected = c("Y", "N"))
-    updateSliderInput(session, "yearSelect", value = c(min(shootings.load$year, na.rm = T), max(shootings.load$year, na.rm = T)))
+    updateSliderInput(session, "yearSelect", value = c(min(years), max(years)))
     showNotification("You have successfully reset the filters", type = "message")
   })
 }
