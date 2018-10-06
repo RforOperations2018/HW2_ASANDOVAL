@@ -26,6 +26,7 @@ ckanUniques <- function(field, id) {
 }
 
 incident <- sort(ckanUniques("code", "shootings")$code)
+years <- sort(ckanUniques("year", "shootings")$year)
 
 
 pdf(NULL)
@@ -46,9 +47,9 @@ ui <- navbarPage("Exploring Shooting Victim Data from Philadelphia",
                               # Year of Incident Slider
                               sliderInput("yearSelect",
                                           "Year of Incident:",
-                                          min = min(shootings.load$year, na.rm = T),
-                                          max = max(shootings.load$year, na.rm = T),
-                                          value = c(min(shootings.load$year, na.rm = T), max(shootings.load$year, na.rm = T)),
+                                          min = min(years),
+                                          max = max(years),
+                                          value = c(min(years), max(years)),
                                           step = 1),
                               
                               # Check box Input for whether incident occured inside
@@ -80,25 +81,15 @@ ui <- navbarPage("Exploring Shooting Victim Data from Philadelphia",
 
 # Define server logic
 
-server <- function(input, output, session = session) 
-
-
-#### 
-  # {
-  # url <- "https://phl.carto.com/api/v2/sql?q=SELECT+*+FROM+shootings" 
-  # # Make the Request
-  # r <- RETRY("GET", URLencode(url))
-  # 
-  # # Extract Content
-  # c <- content(r, "text")
-  # 
-  # # Create Dataframe
-  # dat <- data.frame(jsonlite::fromJSON(c)$rows)
-  # 
-  # 
-  # # Change data types
-  # dat$code<- as.numeric(as.character(dat$code))
-  # dat$latino <- as.character(dat$latino)
+server <- function(input, output, session = session) {
+  loadshootings <- reactive({
+  url <- "https://phl.carto.com/api/v2/sql?q=SELECT+*+FROM+shootings+WHERE+year+>=+'", input$yearSelect[1], "'+AND+<=+'", input$yearSelect[2], "'+AND+code+=+'", input$crimeSelect, "'"
+  r <- RETRY("GET", URLencode(url))
+  c <- content(r, "text")
+  dat <- data.frame(jsonlite::fromJSON(c)$rows)
+  # Change data types
+  dat$code<- as.numeric(as.character(dat$code))
+  dat$latino <- as.character(dat$latino)
   
   # Mutate data
   newdat <- dat %>%
@@ -224,8 +215,29 @@ server <- function(input, output, session = session)
         code > 99 ~ "Homicide",
         code < 100 ~ "Additional Victim",
         TRUE ~ as.character(code)
+        return(newdat)
       )
     )
+})
+
+
+#### 
+  # {
+  # url <- "https://phl.carto.com/api/v2/sql?q=SELECT+*+FROM+shootings" 
+  # # Make the Request
+  # r <- RETRY("GET", URLencode(url))
+  # 
+  # # Extract Content
+  # c <- content(r, "text")
+  # 
+  # # Create Dataframe
+  # dat <- data.frame(jsonlite::fromJSON(c)$rows)
+  # 
+  # 
+  # # Change data types
+  # dat$code<- as.numeric(as.character(dat$code))
+  # dat$latino <- as.character(dat$latino)
+ 
   
   
   # Upload Philly shooting victim data from Opendataphilly
