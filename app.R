@@ -66,12 +66,12 @@ ui <- navbarPage("Exploring Shooting Victim Data from Philadelphia",
                                           value = c(min(years), max(years)),
                                           step = 1),
                               
-                              # # Check box Input for whether incident occured inside
-                              # checkboxGroupInput(inputId = "IncidentInside",
-                              #                    label = "Was the Incident Inside?:",
-                              #                    choiceNames = list("Yes", "No"),
-                              #                    choiceValues = list("1", "0")
-                              # ),
+                              # Check box Input for whether incident occured inside
+                              checkboxGroupInput(inputId = "IncidentInside",
+                                                 label = "Was the Incident Inside?:",
+                                                 choiceNames = list("Yes", "No"),
+                                                 choiceValues = list("1", "0")
+                              ),
                               
                               # Action button
                               actionButton("reset", "Reset Filters", icon = icon("refresh"))
@@ -93,18 +93,27 @@ ui <- navbarPage("Exploring Shooting Victim Data from Philadelphia",
                  )
 )
 
-
-########
 # Define server logic
 server <- function(input, output, session = session) {
     loadshoot <- reactive({
       # Build API Query with proper encodes    
-  url <- paste0("https://phl.carto.com/api/v2/sql?q=SELECT+*+FROM+shootings")
-
-  dat <- ckanSQL(url) %>%
-
+  url <- paste0("https://phl.carto.com/api/v2/sql?q=SELECT+*+FROM+shootings+WHERE+year+%3E+", input$yearSelect[1],"+AND+year+%3C+",input$yearSelect[2],"+")
+  dat <- ckanSQL(url) %>%  
+    # # Slider Filter
+    # filter(year >= input$yearSelect[1] & year <= input$yearSelect[2])   
+    # 
+    # # Type of Crime Filter
+    # if (length(input$crimeSelect) > 0 ) {
+    #   dat <- subset(dat, code %in% input$crimeSelect)
+    # }
+    # 
+    # # Location of Incident
+    # if (length(input$IncidentInside) > 0 ) {
+    #   dat <- subset(dat, inside %in% input$IncidentInside)
+    # } %>%
+  
 # I tried doing this parsing thing, but I couldn't get it to work. When I removedit, it worked fine, so I took it out. 
-    #+WHERE+year+>=+'", input$yearSelect[1],"'+AND+<=+'",input$yearSelect[2],"'+AND+code+=+'",input$crimeSelect,"'"
+    #+WHERE+year+>+'", input$yearSelect[1],"'+AND+<=+'",input$yearSelect[2],"'+AND+code+=+'",input$crimeSelect,"'"
     
       # Clean Data
       # Clean Wounds fields. This one took forever! I tried to do a case when IN function like in sql to save some
@@ -232,20 +241,6 @@ server <- function(input, output, session = session) {
   return(dat)
 })
 
-  #   shootings <- shootings.load %>%
-  #     # Slider Filter
-  #     filter(year >= input$yearSelect[1] & year <= input$yearSelect[2])
-  #   
-  #   # Type of Crime Filter
-  #   if (length(input$crimeSelect) > 0 ) {
-  #     shootings <- subset(shootings, code %in% input$crimeSelect)
-  #   } 
-  #   
-  #   # Location of Incident
-  #   if (length(input$IncidentInside) > 0 ) {
-  #     shootings <- subset(shootings, inside %in% input$IncidentInside)
-  #   }
-
   # A plot showing the the fequency of incidents over the years
   output$codeplot <- renderPlotly({
     dat <- loadshoot()
@@ -292,28 +287,23 @@ server <- function(input, output, session = session) {
   # Data Table
   output$table <- DT::renderDataTable({
     dat<- loadshoot()
-    subset(dat, select = c(code, wound, offender_injured, location, race, sex, dist, time))
-  })
+    subset(dat, select = c(code, wound, offender_injured, location, race, sex, dist, time))})
   
   # Updating the URL Bar
   observe({
     print(reactiveValuesToList(input))
-    session$doBookmark()
-  })
+    session$doBookmark()})
   
   onBookmarked(function(url) {
-    updateQueryString(url)
-  })
+    updateQueryString(url)})
   
   # Download data in the datatable
   output$downloadData <- downloadHandler(
     filename = function() {
-      paste("shootings", Sys.Date(), ".csv", sep="")
-    },
+      paste("shootings", Sys.Date(), ".csv", sep="")},
     
     content = function(file) {
-      write.csv(loadshoot(), file)
-    })
+      write.csv(loadshoot(), file)})
   
   # Reset Filter Data
   observeEvent(input$reset, {
@@ -326,5 +316,3 @@ server <- function(input, output, session = session) {
 
 # Run the application 
 shinyApp(ui = ui, server = server, enableBookmarking = "url")
-
-
