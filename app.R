@@ -52,12 +52,12 @@ ui <- navbarPage("Exploring Shooting Victim Data from Philadelphia",
                                           value = c(min(years), max(years)),
                                           step = 1),
                               
-                              # Check box Input for whether incident occured inside
-                              checkboxGroupInput(inputId = "IncidentInside",
-                                                 label = "Was the Incident Inside?:",
-                                                 choiceNames = list("Yes", "No"),
-                                                 choiceValues = list("1", "0")
-                              ),
+                              # # Check box Input for whether incident occured inside
+                              # checkboxGroupInput(inputId = "IncidentInside",
+                              #                    label = "Was the Incident Inside?:",
+                              #                    choiceNames = list("Yes", "No"),
+                              #                    choiceValues = list("1", "0")
+                              # ),
                               
                               # Action button
                               actionButton("reset", "Reset Filters", icon = icon("refresh"))
@@ -215,9 +215,9 @@ server <- function(input, output, session = session) {
         code > 99 ~ "Homicide",
         code < 100 ~ "Additional Victim",
         TRUE ~ as.character(code)
-        return(shootings.load)
       )
     )
+  return(shootings.load)
 })
 
 
