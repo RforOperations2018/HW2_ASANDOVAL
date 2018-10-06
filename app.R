@@ -97,7 +97,7 @@ ui <- navbarPage("Exploring Shooting Victim Data from Philadelphia",
 server <- function(input, output, session = session) {
     loadshoot <- reactive({
       # Build API Query with proper encodes    
-  url <- paste0("https://phl.carto.com/api/v2/sql?q=SELECT+*+FROM+shootings+WHERE+year+%3E+", input$yearSelect[1],"+AND+year+%3C+",input$yearSelect[2],"+")
+  url <- paste0("https://phl.carto.com/api/v2/sql?q=SELECT+*+FROM+shootings+WHERE+year+%3E%3D+", input$yearSelect[1],"+AND+year+%3C%3D+",input$yearSelect[2],"+")
   dat <- ckanSQL(url) %>%  
     # # Slider Filter
     # filter(year >= input$yearSelect[1] & year <= input$yearSelect[2])   
