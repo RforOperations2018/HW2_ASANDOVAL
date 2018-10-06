@@ -10,7 +10,7 @@ library(jsonlite)
 library(plotly)
 library(htmltools)
  
-####MY ATTEMPT
+
 ckanSQL <- function(url) {
   # MAKE REQUEST
   r <- RETRY("GET", URLencode(url))
@@ -88,9 +88,7 @@ server <- function(input, output, session = session) {
   url <- paste0("https://phl.carto.com/api/v2/sql?q=SELECT+*+FROM+shootings")
 
   dat <- ckanSQL(url) %>%
-  # Change data types
-  # dat$code <- as.numeric(as.character(dat$code)) %>%
-  # dat$latino <- as.character(dat$latino) %>%
+  
   
   # Mutate data
     #+WHERE+year+>=+'", input$yearSelect[1],"'+AND+<=+'",input$yearSelect[2],"'+AND+code+=+'",input$crimeSelect,"'"
@@ -112,6 +110,7 @@ server <- function(input, output, session = session) {
         wound == "arms" ~ "Arm",
         wound == "elbow" ~ "Arm",
         wound == "forearm" ~ "Arm",
+        wound == "BACK" ~ "Back",
         wound == "back" ~ "Back",
         wound == "back/head" ~ "Back",
         wound == "flank" ~ "Back",
@@ -185,7 +184,8 @@ server <- function(input, output, session = session) {
         wound == "stomach" ~ "Stomach",
         wound == "unk" ~ "Unknown",
         TRUE ~ as.character(wound)),
-
+        
+       
       # I tried to do a case when on the latino field to be in the race field by doing if latino == “1” ~ race == “Hispanic” but
       # it didn’t work and couldn’t figure out a better way. This was my weird workaround to get latino into race. This command
       # essentially turned race into false where latino == 1
@@ -206,6 +206,7 @@ server <- function(input, output, session = session) {
       # Clean sex
       sex = ifelse(sex == "M", "Male", "Female"),
       
+      code = as.numeric(code),
       # This was another tricky one. I originally tried to do a case when if code >= 100 <= 119 ~ “Homicide” but it didn’t work. This works but not ideal.
       code = case_when(
         code > 2999 ~ "Hospital Cases",
@@ -219,29 +220,6 @@ server <- function(input, output, session = session) {
   return(dat)
 })
 
-
-#### 
-  # {
-  # url <- "https://phl.carto.com/api/v2/sql?q=SELECT+*+FROM+shootings" 
-  # # Make the Request
-  # r <- RETRY("GET", URLencode(url))
-  # 
-  # # Extract Content
-  # c <- content(r, "text")
-  # 
-  # # Create Dataframe
-  # newdat<- data.frame(jsonlite::fromJSON(c)$rows)
-  # 
-  # 
-  # # Change data types
-  # dat$code<- as.numeric(as.character(dat$code))
-  # dat$latino <- as.character(dat$latino)
- 
-  
-  
-  # Upload Philly shooting victim data from Opendataphilly
- # shootings.load <- newdat
-  
   
   # Filtered shootings data
  # loadshoot <- reactive({
@@ -261,11 +239,7 @@ server <- function(input, output, session = session) {
   #   
   #   return(shootings)
   # })
-  # Reactive melted data
-  # meltInput <- reactive({
-  #   loadshoot() %>%
-  #     melt(id = "code")
-  # })
+
   # A plot showing the the fequency of incidents over the years
   output$codeplot <- renderPlotly({
     dat <- loadshoot()
@@ -331,7 +305,7 @@ server <- function(input, output, session = session) {
   # Data Table
   output$table <- DT::renderDataTable({
     dat<- loadshoot()
-    subset(dat, select = c(code, offender_injured, location, race, sex, dist, time))
+    subset(dat, select = c(code, wound, offender_injured, location, race, sex, dist, time))
   })
   
   # Updating the URL Bar
