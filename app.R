@@ -85,7 +85,7 @@ ui <- navbarPage("Exploring Shooting Victim Data from Philadelphia",
 server <- function(input, output, session = session) {
     loadshoot <- reactive({
       # Build API Query with proper encodes    
-  url <- paste0("https://phl.carto.com/api/v2/sql?q=SELECT+*+FROM+shootings+WHERE+year+>=+'", input$yearSelect[1],"'+AND+<=+'",input$yearSelect[2],"'+AND+code+=+'",input$crimeSelect,"'")
+  url <- paste0("https://phl.carto.com/api/v2/sql?q=SELECT+*+FROM+shootings")
 
   dat <- ckanSQL(url) %>%
   # Change data types
@@ -93,16 +93,16 @@ server <- function(input, output, session = session) {
   # dat$latino <- as.character(dat$latino) %>%
   
   # Mutate data
-
-    mutate(
+    #+WHERE+year+>=+'", input$yearSelect[1],"'+AND+<=+'",input$yearSelect[2],"'+AND+code+=+'",input$crimeSelect,"'"
+    
       # Clean Data
-      # Clean Wounds fields. This one took forever! I tried to do a case when IN function like in sql to save some 
+      # Clean Wounds fields. This one took forever! I tried to do a case when IN function like in sql to save some
       # lines of code, but no luck so I did it this way. I first opened the csv and manually categorized each value 
       # into a body area and then added all the quotes, equal signs, and squiggly signs in excel so I could just 
       # copy and paste it into r. I know this probably isn’t the best to clean data that is going to continually 
       # update since potentially a new cell could be spelled  aaaabbbdddoommenn  or some other incorrect way for 
       # abdomen but, this is what I could do.
-      wound = case_when(
+  mutate(wound = case_when(
         wound == "aabdomen" ~ "Abdomen",
         wound == "abdom" ~ "Abdomen",
         wound == "abdome" ~ "Abdomen",
@@ -184,14 +184,14 @@ server <- function(input, output, session = session) {
         wound == "stom" ~ "Stomach",
         wound == "stomach" ~ "Stomach",
         wound == "unk" ~ "Unknown",
-        TRUE ~ as.character(wound)
-      ),
-      
-      # I tried to do a case when on the latino field to be in the race field by doing if latino == “1” ~ race == “Hispanic” but 
-      # it didn’t work and couldn’t figure out a better way. This was my weird workaround to get latino into race. This command 
+        TRUE ~ as.character(wound)),
+
+      # I tried to do a case when on the latino field to be in the race field by doing if latino == “1” ~ race == “Hispanic” but
+      # it didn’t work and couldn’t figure out a better way. This was my weird workaround to get latino into race. This command
       # essentially turned race into false where latino == 1
+
       race = ifelse(latino == "1", race == "Hispanic", race),
-      
+    
       # I then did a case when to get it to be Hispanic and cleaned the others
       race = case_when(
         race == "A" ~ "Asian",
@@ -201,8 +201,7 @@ server <- function(input, output, session = session) {
         race == "W" ~ "White",
         race == "M" ~ "Multi",
         race == FALSE ~ "Hispanic",
-        TRUE ~ as.character(race)
-      ), 
+        TRUE ~ as.character(race)), 
       
       # Clean sex
       sex = ifelse(sex == "M", "Male", "Female"),
@@ -215,9 +214,8 @@ server <- function(input, output, session = session) {
         code > 199 ~ "Rape",
         code > 99 ~ "Homicide",
         code < 100 ~ "Additional Victim",
-        TRUE ~ as.character(code)
-      )
-    )
+        TRUE ~ as.character(code)))
+  
   return(dat)
 })
 
@@ -232,7 +230,7 @@ server <- function(input, output, session = session) {
   # c <- content(r, "text")
   # 
   # # Create Dataframe
-  # dat <- data.frame(jsonlite::fromJSON(c)$rows)
+  # newdat<- data.frame(jsonlite::fromJSON(c)$rows)
   # 
   # 
   # # Change data types
@@ -264,10 +262,10 @@ server <- function(input, output, session = session) {
   #   return(shootings)
   # })
   # Reactive melted data
-  meltInput <- reactive({
-    loadshoot() %>%
-      melt(id = "code")
-  })
+  # meltInput <- reactive({
+  #   loadshoot() %>%
+  #     melt(id = "code")
+  # })
   # A plot showing the the fequency of incidents over the years
   output$codeplot <- renderPlotly({
     dat <- loadshoot()
@@ -283,7 +281,7 @@ server <- function(input, output, session = session) {
   
   # Column plot showing types of wounds
   output$woundplotc <- renderPlotly({
-    dat <- loadshoot()
+    dat<- loadshoot()
     ggplotly(
       ggplot(data = dat, aes(x = wound, fill = as.character(fatal))) + 
         geom_bar (position = position_dodge(width = 0.7)) +
@@ -302,7 +300,7 @@ server <- function(input, output, session = session) {
   
   # Race bar plot
   output$raceplot <- renderPlotly({
-    dat <- loadshoot()
+    dat<- loadshoot()
     ggplotly(
       ggplot(data = dat, aes(x = race, fill = sex)) +
         geom_bar (position = position_dodge(width = 0.9)) +
@@ -316,7 +314,7 @@ server <- function(input, output, session = session) {
   # 
   # # A plot showing the sale price of properties
   # output$raceplot <- renderPlotly({
-  #   dat <- loadshoot()
+  #   newdat<- loadshoot()
   #   ggplotly()
   #   ggplot(data = dat, 
   #          aes(x = as.numeric(year), 
@@ -332,7 +330,7 @@ server <- function(input, output, session = session) {
   
   # Data Table
   output$table <- DT::renderDataTable({
-    dat <- loadshoot()
+    dat<- loadshoot()
     subset(dat, select = c(code, offender_injured, location, race, sex, dist, time))
   })
   
