@@ -16,6 +16,8 @@ ckanSQL <- function(url) {
   r <- RETRY("GET", URLencode(url))
   # EXTRACT CONTENT
   c <- content(r, "text")
+  # Basic gsub to make NA's consistent with R
+  json <- gsub('NaN', 'NA', c, perl = TRUE)
   # Create Dataframe
   data.frame(jsonlite::fromJSON(c)$rows)
 }
@@ -25,9 +27,21 @@ ckanUniques <- function(field, id) {
   c(ckanSQL(URLencode(url)))
 }
 
-incident <- sort(ckanUniques("code", "shootings")$code)
+# incident <- sort(ckanUniques("code", "shootings")$code)
 years <- sort(ckanUniques("year", "shootings")$year)
 inside <- sort(ckanUniques("inside", "shootings")$inside)
+
+incident <- sort(ckanUniques("code", "shootings")$code) 
+# %>%
+#   mutate(code = as.numeric(code),
+#          code = case_when(
+#            code > 2999 ~ "Hospital Cases",
+#            code > 399 ~ "Aggravated Assault",
+#            code > 299 ~ "Robbery",
+#            code > 199 ~ "Rape",
+#            code > 99 ~ "Homicide",
+#            code < 100 ~ "Additional Victim",
+#            TRUE ~ as.character(code)))
 
 pdf(NULL)
 
@@ -88,6 +102,7 @@ server <- function(input, output, session = session) {
   url <- paste0("https://phl.carto.com/api/v2/sql?q=SELECT+*+FROM+shootings")
 
   dat <- ckanSQL(url) %>%
+
   
   
   # Mutate data
