@@ -10,22 +10,22 @@ library(jsonlite)
 library(plotly)
 library(htmltools)
  
+####MY ATTEMPT
+ckanSQL <- function(url) {
+  # MAKE REQUEST
+  r <- RETRY("GET", URLencode(url))
+  # EXTRACT CONTENT
+  c <- content(r, "text")
+  # Create Dataframe
+  data.frame(jsonlite::fromJSON(c)$rows)
+}
+# UNIQUE VALUES FOR RESOURCE FIELD
+ckanUniques <- function(field, id) {
+  url <- paste0("https://phl.carto.com/api/v2/sql?q=SELECT+", field, "+FROM+", id)
+  c(ckanSQL(URLencode(url)))
+}
 
-
-
-
-# A couple of fields in the shootings data were modified to help build the app. 
-# Code_2 is a cleaner field than code
-# Wound  field was cleaned and turned into broader categories
-# Race field did not include Latino status, which was a separate field. It was then cleaned to be inclusive
-# Sex was cleaned from M and F to Male and Female
-# NA's were included where there was blank data
-
-
-
-# selectdat <- "https://phl.carto.com/api/v2/sql?q=SELECT+code+FROM+shootings"
-# codes <- unique(selectdat$code)
-# selectdat$code
+incident <- sort(ckanUniques("code", "shootings")$code)
 
 
 pdf(NULL)
@@ -38,7 +38,7 @@ ui <- navbarPage("Exploring Shooting Victim Data from Philadelphia",
                               # Selecting type of crime
                               selectInput("crimeSelect",
                                           "Type of Incident:",
-                                          choices = sort(unique(shootings.load$code)),
+                                          choices = incident,
                                           multiple = TRUE,
                                           selectize = TRUE,
                                           selected = c("Aggravated Assualt", "Robbery", "Homicide", "Hospital Cases")),
@@ -80,21 +80,25 @@ ui <- navbarPage("Exploring Shooting Victim Data from Philadelphia",
 
 # Define server logic
 
-server <- function(input, output, session = session) {
-  url <- "https://phl.carto.com/api/v2/sql?q=SELECT+*+FROM+shootings" 
-  # Make the Request
-  r <- RETRY("GET", URLencode(url))
-  
-  # Extract Content
-  c <- content(r, "text")
-  
-  # Create Dataframe
-  dat <- data.frame(jsonlite::fromJSON(c)$rows)
-  
-  
-  # Change data types
-  dat$code<- as.numeric(as.character(dat$code))
-  dat$latino <- as.character(dat$latino)
+server <- function(input, output, session = session) 
+
+
+#### 
+  # {
+  # url <- "https://phl.carto.com/api/v2/sql?q=SELECT+*+FROM+shootings" 
+  # # Make the Request
+  # r <- RETRY("GET", URLencode(url))
+  # 
+  # # Extract Content
+  # c <- content(r, "text")
+  # 
+  # # Create Dataframe
+  # dat <- data.frame(jsonlite::fromJSON(c)$rows)
+  # 
+  # 
+  # # Change data types
+  # dat$code<- as.numeric(as.character(dat$code))
+  # dat$latino <- as.character(dat$latino)
   
   # Mutate data
   newdat <- dat %>%
