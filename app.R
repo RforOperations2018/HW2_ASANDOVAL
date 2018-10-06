@@ -82,7 +82,7 @@ ui <- navbarPage("Exploring Shooting Victim Data from Philadelphia",
 # Define server logic
 
 server <- function(input, output, session = session) {
-  loadshootings <- reactive({
+    shootInput <- reactive({
   url <- "https://phl.carto.com/api/v2/sql?q=SELECT+*+FROM+shootings+WHERE+year+>=+'", input$yearSelect[1], "'+AND+<=+'", input$yearSelect[2], "'+AND+code+=+'", input$crimeSelect, "'"
   r <- RETRY("GET", URLencode(url))
   c <- content(r, "text")
@@ -215,7 +215,7 @@ server <- function(input, output, session = session) {
         code > 99 ~ "Homicide",
         code < 100 ~ "Additional Victim",
         TRUE ~ as.character(code)
-        return(newdat)
+        return(shootings.load)
       )
     )
 })
@@ -241,27 +241,27 @@ server <- function(input, output, session = session) {
   
   
   # Upload Philly shooting victim data from Opendataphilly
-  shootings.load <- newdat
+ # shootings.load <- newdat
   
   
   # Filtered shootings data
-  shootInput <- reactive({
-    shootings <- shootings.load %>%
-      # Slider Filter
-      filter(year >= input$yearSelect[1] & year <= input$yearSelect[2])
-    
-    # Type of Crime Filter
-    if (length(input$crimeSelect) > 0 ) {
-      shootings <- subset(shootings, code %in% input$crimeSelect)
-    } 
-    
-    # Location of Incident
-    if (length(input$IncidentInside) > 0 ) {
-      shootings <- subset(shootings, inside %in% input$IncidentInside)
-    }
-    
-    return(shootings)
-  })
+ # shootInput <- reactive({
+  #   shootings <- shootings.load %>%
+  #     # Slider Filter
+  #     filter(year >= input$yearSelect[1] & year <= input$yearSelect[2])
+  #   
+  #   # Type of Crime Filter
+  #   if (length(input$crimeSelect) > 0 ) {
+  #     shootings <- subset(shootings, code %in% input$crimeSelect)
+  #   } 
+  #   
+  #   # Location of Incident
+  #   if (length(input$IncidentInside) > 0 ) {
+  #     shootings <- subset(shootings, inside %in% input$IncidentInside)
+  #   }
+  #   
+  #   return(shootings)
+  # })
   # Reactive melted data
   meltInput <- reactive({
     shootInput() %>%
